@@ -2,16 +2,17 @@
 """
 For system requirements, see https://github.com/NVlabs/stylegan
 
-This code was built & tested in the environment faceenv in faceenv.yml, which consists of:
+This code was built & tested with 
 python 3.7.10
+
 tensorflow-gpu 1.15
 pillow 7.1.2
 matplotlib 3.2.2
 torchvision 0.9.1
+
 cuda 10.0
 cudnn 7.6
-
-GPU used: NVidia GeForce GTX 1080
+gpu: NVidia GeForce GTX 1080
 
 If the system requirements are not met, please consider using a version hosted on google colab: 
 https://colab.research.google.com/drive/1Qdh623RDiqjhiYDVdhSjaGv4Uwe6GsAS?usp=sharing#scrollTo=auKnsGw9hl9O
@@ -142,12 +143,19 @@ def generate_imgs(model, nimage, positionMatrix, stimsize):
                      
 
 ## for circle generator: places point in cartesian plane where circle will center on
-def coords():
-    rad = np.arange(360)*(0.0174533) #radians
-    x = np.cos(rad) #x-coordinates around a unit circle in a 2D plane
-    y = np.sin(rad) #y-coordinates "
+# def coords():
+    # rad = np.arange(360)*(0.0174533) #radians
+    # x = np.cos(rad) #x-coordinates around a unit circle in a 2D plane
+    # y = np.sin(rad) #y-coordinates "
 
-    return x,y,x**2+y**2
+    # return x,y,x**2+y**2
+    
+
+def coords(r, n):
+    t = np.linspace(0, 2*np.pi, n, endpoint=False)
+    x = r * np.cos(t)
+    y = r * np.sin(t)
+    return x,y,r
 
 
 #%%
@@ -166,14 +174,13 @@ dim_b = -1
 while(dim_b==dim_a or dim_b==-1):
     dim_b = rd.randint(0,511)
 circle_starting_radius = 0
-circle_radius = 50
-circle_stepsize = 20
-
+circle_radius = .005
+circle_nimage = 13
 # default values - line
 dim = rd.randint(0,511)
 line_starting_radius = 0
-line_startpoint = -100
-line_stoppoint = 100
+line_startpoint = -.002
+line_stoppoint = .002
 line_nimage = 10
        
 while True:
@@ -282,29 +289,30 @@ while True:
             circle_starting_radius_input = input("Enter distance of circle from face 0 (default "+str(circle_starting_radius)+"): ")
             if len(circle_starting_radius_input) == 0:
                 circle_starting_radius = circle_starting_radius
-                print("Using default circle starting radius %d" %circle_starting_radius)
+                print("Using default circle starting radius %f" %circle_starting_radius)
             else:
                 circle_starting_radius = float(circle_starting_radius_input)
+            circle_starting_radius_scaled = circle_starting_radius * 1
             
             # circle_radius
             circle_radius_input = input("Enter circle radius (default "+str(circle_radius)+"): ")
             if len(circle_radius_input) == 0:
                 circle_radius = circle_radius
-                print("Using default circle radius %d" %circle_radius)
+                print("Using default circle radius %f" %circle_radius)
             else:
                 circle_radius = float(circle_radius_input)
-            circle_radius_scaled = circle_radius * 1/25000
+            circle_radius_scaled = circle_radius * 1
             
-            # circle_stepsize
-            circle_stepsize_input = input("Enter distance between images on circumference (must be a dividend of 360, default "+str(circle_stepsize)+"): ")
-            if len(circle_stepsize_input) == 0:
-                circle_stepsize = circle_stepsize
-                print("Using default circle step size %d" %circle_stepsize)
+            # circle_nimage
+            circle_nimage_input = input("Enter number of equidistant images to generate on the circle (default "+str(circle_nimage)+"): ")
+            if len(circle_nimage_input) == 0:
+                circle_nimage = circle_nimage
+                print("Using default number of images in circle %d" %circle_nimage)
             else:
-                circle_stepsize = int(circle_stepsize_input)
+                circle_nimage = int(circle_nimage_input)
                 
-            paramsNames.extend(['First dimension', 'Second dimension', 'Circle starting radius', 'Circle radius', 'Circle step size'])
-            params.extend([dim_a, dim_b, circle_starting_radius, circle_radius, circle_stepsize])
+            paramsNames.extend(['First dimension', 'Second dimension', 'Circle starting radius', 'Circle radius', 'Number of images in circle'])
+            params.extend([dim_a, dim_b, circle_starting_radius, circle_radius, circle_nimage])
 
         ## parameters for line generator ##
         if generation_mode == 'l':
@@ -321,27 +329,28 @@ while True:
             line_starting_radius_input = input("Enter distance of line center from face 0 (default "+str(line_starting_radius)+"): ")
             if len(line_starting_radius_input) == 0:
                 line_starting_radius = line_starting_radius
-                print("Using default line starting radius %d" %line_starting_radius)
+                print("Using default line starting radius %f" %line_starting_radius)
             else:
                 line_starting_radius = float(line_starting_radius_input)
+            line_starting_radius_scaled = line_starting_radius * 1
             
             # line_startpoint
             line_startpoint_input = input("Enter a starting point for line generation (default "+str(line_startpoint)+"): ")
             if len(line_startpoint_input) == 0:
                 line_startpoint = line_startpoint
-                print("Using default line start point %d" %line_startpoint)
+                print("Using default line start point %f" %line_startpoint)
             else:
                 line_startpoint = float(line_startpoint_input)
-            line_startpoint_scaled = line_startpoint * 1/50000
+            line_startpoint_scaled = line_startpoint * 1
                 
             # line_stoppoint
             line_stoppoint_input = input("Enter an ending point for line generation (default "+str(line_stoppoint)+"): ")
             if len(line_stoppoint_input) == 0:
                 line_stoppoint = line_stoppoint
-                print("Using default line stop point %d" %line_stoppoint)
+                print("Using default line stop point %f" %line_stoppoint)
             else:
                 line_stoppoint = float(line_stoppoint_input)
-            line_stoppoint_scaled = line_stoppoint * 1/50000
+            line_stoppoint_scaled = line_stoppoint * 1
             
             # line_nimage
             line_nimage_input = input("Enter number of equidistant images to generate on the line (default "+str(line_nimage)+"): ")
@@ -373,43 +382,40 @@ while True:
             ndim = 512   # number of dimensions
             ndegrees = 360  # total number of steps around a circle
 
-            if ndegrees%circle_stepsize != 0:
-                    print('cirstep must be a dividend of 360')
-            else:
+            ## normalize starting radius to face 0
+            center = np.random.uniform(0,.5,ndim)   
+            squares = [center[i]**2 for i in range(0,len(center))]
+            t = np.sum(squares)**.5    
+            center = (center/t)*circle_starting_radius_scaled 
+            center_mean = np.mean(center)
 
-                ## randomly select 512 points in space? 
-                center = np.random.uniform(0,.5,ndim)   
-                ## normalize selected points to face 0
-                squares = [center[i]**2 for i in range(0,len(center))]
-                t = np.sum(squares)**.5    
-                center = (center/t)*circle_starting_radius 
-
-                ## x,y are the horizontal and vertical vertical coordinates of a generic circle
-                x,y,radius = coords()
-                
-                ## store indices of faces in matrix
-                cart = np.zeros((ndim,int(ndegrees/circle_stepsize)))
-                for d in range(int(ndegrees/circle_stepsize)):
-                    cart[dim_a,d]=x[d*circle_stepsize]*circle_radius_scaled
-                    cart[dim_b,d]=y[d*circle_stepsize]*circle_radius_scaled
-                for i in range(ndim):
-                    for d in range(int(ndegrees/circle_stepsize)):
-                        cart[i,d] = cart[i,d] + center[i]
-                
-                ## call generation function
-                generate_imgs(averaged_generator_network, int(ndegrees/circle_stepsize), cart, stimulus_size)
+            ## x,y are the horizontal and vertical vertical coordinates of a generic circle
+            x,y,radius = coords(circle_radius_scaled, circle_nimage)
+                    
+            ## store indices of faces in matrix
+            cart = np.zeros((ndim,circle_nimage))
+            for d in range(circle_nimage):
+                cart[dim_a,d]=x[d]
+                cart[dim_b,d]=y[d]
+            for i in range(ndim):
+                for d in range(circle_nimage):
+                    # cart[i,d] = cart[i,d] + center[i]
+                    cart[i,d] = cart[i,d] + center_mean
+           
+            ## call generation function
+            generate_imgs(averaged_generator_network, circle_nimage, cart, stimulus_size)
                 
         if generation_mode == 'l':
 
             # Line Generator
             ndim = 512  # number of dimensions
             
-            ## randomly select 512 points in space? 
+            ## normalize starting radius to face 0
             center = np.random.uniform(0,.5,ndim)   
-            ## normalize selected points to face 0
             squares = [center[i]**2 for i in range(0,len(center))]
             t = np.sum(squares)**.5    
-            center = (center/t)*line_starting_radius   
+            center = (center/t)*line_starting_radius_scaled 
+            center_mean = np.mean(center)
             
             ## store indices of faces in matrix
             sequence = np.linspace(line_startpoint_scaled,line_stoppoint_scaled,line_nimage)   
@@ -417,7 +423,8 @@ while True:
             cart[dim,:] = cart[dim,:] + sequence 
             for i in range(ndim):
               for d in range(sequence.size):
-                cart[i,d] = cart[i,d] + center[i]
+                # cart[i,d] = cart[i,d] + center[i]
+                cart[i,d] = cart[i,d] + center_mean
             
             ## call generation function
             generate_imgs(averaged_generator_network, sequence.size, cart, stimulus_size)
